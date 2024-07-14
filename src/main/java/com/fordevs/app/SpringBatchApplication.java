@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
-@EnableBatchProcessing
+@EnableBatchProcessing //enables spring batch
 @ComponentScan({
 		"com.fordevs.config",
 		"com.fordevs.processor"

@@ -23,7 +23,7 @@ public class DatabaseConfiguration {
         DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
         dataSourceBuilder.url("jdbc:mysql://localhost:3306/spring_batch?createDatabaseIfNotExist=TRUE");
         dataSourceBuilder.username("root");
-        dataSourceBuilder.password("password");
+        dataSourceBuilder.password("toor");
         return dataSourceBuilder.build();
     }
 
@@ -32,16 +32,16 @@ public class DatabaseConfiguration {
         DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
         dataSourceBuilder.url("jdbc:mysql://localhost:3306/university?createDatabaseIfNotExist=TRUE");
         dataSourceBuilder.username("root");
-        dataSourceBuilder.password("password");
+        dataSourceBuilder.password("toor");
         return dataSourceBuilder.build();
     }
 
     @Bean("postgresqluniversitydatasource")
     public DataSource postgresqluniversitydatasource() {
         DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
-        dataSourceBuilder.url("jdbc:postgresql://localhost:5432/university?createDatabaseIfNotExist=TRUE");
+        dataSourceBuilder.url("jdbc:postgresql://localhost:5432/for-devs-university?createDatabaseIfNotExist=TRUE");
         dataSourceBuilder.username("postgres");
-        dataSourceBuilder.password("password");
+        dataSourceBuilder.password("toor");
         return dataSourceBuilder.build();
     }
 

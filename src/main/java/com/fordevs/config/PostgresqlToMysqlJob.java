@@ -47,7 +47,7 @@ public class PostgresqlToMysqlJob {
 
     private Step firstChunkStep() {
         return stepBuilderFactory.get("First Chunk Step")
-                .<PostgreSqlStudent, MySqlStudent>chunk(3)
+                .<PostgreSqlStudent, MySqlStudent>chunk(1000)
                 .reader(jpaCursorItemReader())
                 .processor(postgresqlToMysqlProcessor)
                 .writer(jpaItemWriter())
