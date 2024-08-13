@@ -46,6 +46,7 @@ public class DatabaseConfiguration {
     }
 
     @Bean
+    @Primary
     public EntityManagerFactory postgresqlEntityManagerFactory() {
         LocalContainerEntityManagerFactoryBean lem = new LocalContainerEntityManagerFactoryBean();
         lem.setDataSource(postgresqluniversitydatasource());
