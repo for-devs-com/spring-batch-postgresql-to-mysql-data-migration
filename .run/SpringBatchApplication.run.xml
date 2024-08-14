@@ -1,12 +1,5 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="SpringBatchApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
-    <additionalParameters>
-      <param>
-        <option name="enabled" value="true" />
-        <option name="name" value="server.port" />
-        <option name="value" value="8081" />
-      </param>
-    </additionalParameters>
     <module name="spring-batch-postgresql-to-mysql-data-migration" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="com.fordevs.app.SpringBatchApplication" />
     <method v="2">
