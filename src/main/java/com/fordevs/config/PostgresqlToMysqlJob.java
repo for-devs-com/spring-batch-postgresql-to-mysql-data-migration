@@ -3,75 +3,76 @@ package com.fordevs.config;
 import com.fordevs.entity.mysql.MySqlStudent;
 import com.fordevs.entity.postgresql.PostgreSqlStudent;
 import com.fordevs.processor.PostgresqlToMysqlProcessor;
+import jakarta.persistence.EntityManagerFactory;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
-import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
-import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.database.JpaCursorItemReader;
 import org.springframework.batch.item.database.JpaItemWriter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.orm.jpa.JpaTransactionManager;
-
-import javax.persistence.EntityManagerFactory;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 public class PostgresqlToMysqlJob {
 
     @Autowired
-    private JobBuilderFactory jobBuilderFactory;
-    @Autowired
-    private StepBuilderFactory stepBuilderFactory;
-    @Autowired
     private PostgresqlToMysqlProcessor postgresqlToMysqlProcessor;
+
     @Autowired
     @Qualifier("postgresqlEntityManagerFactory")
     private EntityManagerFactory postgresqlEntityManagerFactory;
+
     @Autowired
     @Qualifier("mysqlEntityManagerFactory")
     private EntityManagerFactory mysqlEntityManagerFactory;
+
     @Autowired
-    private JpaTransactionManager jpaTransactionManager;
+    @Qualifier("postgresqlTransactionManager")
+    private PlatformTransactionManager postgresqlTransactionManager;
+
+    @Autowired
+    @Qualifier("mysqlTransactionManager")
+    private PlatformTransactionManager mysqlTransactionManager;
 
     @Bean
-    public Job chunkJob() {
-        return jobBuilderFactory.get("Chunk Job")
+    public Job chunkJob(JobRepository jobRepository) {
+        return new JobBuilder("Chunk Job", jobRepository)
                 .incrementer(new RunIdIncrementer())
-                .start(firstChunkStep())
+                .start(firstChunkStep(jobRepository))
                 .build();
     }
 
-    private Step firstChunkStep() {
-        return stepBuilderFactory.get("First Chunk Step")
-                .<PostgreSqlStudent, MySqlStudent>chunk(1000)
+    private Step firstChunkStep(JobRepository jobRepository) {
+        return new StepBuilder("firstChunkStep", jobRepository)
+                .<PostgreSqlStudent, MySqlStudent>chunk(10, postgresqlTransactionManager)
                 .reader(jpaCursorItemReader())
                 .processor(postgresqlToMysqlProcessor)
                 .writer(jpaItemWriter())
-                .faultTolerant()
-                .skip(Throwable.class)
-                .skipLimit(100)
-                .retryLimit(3).retry(Throwable.class)
-                .transactionManager(jpaTransactionManager)
+                .transactionManager(mysqlTransactionManager)
                 .build();
     }
 
-    @StepScope
     @Bean
+    @StepScope
     public JpaCursorItemReader<PostgreSqlStudent> jpaCursorItemReader() {
-        JpaCursorItemReader<PostgreSqlStudent> jpaCursorItemReader = new JpaCursorItemReader<>();
-        jpaCursorItemReader.setEntityManagerFactory(postgresqlEntityManagerFactory);
-        //Next is a query for the whole student table.
-        jpaCursorItemReader.setQueryString("From PostgreSqlStudent");
-        return jpaCursorItemReader;
+        JpaCursorItemReader<PostgreSqlStudent> reader = new JpaCursorItemReader<>();
+        reader.setEntityManagerFactory(postgresqlEntityManagerFactory);
+        reader.setQueryString("SELECT s FROM PostgreSqlStudent s");
+        return reader;
     }
 
+    @Bean
+    @StepScope
     public JpaItemWriter<MySqlStudent> jpaItemWriter() {
-        JpaItemWriter<MySqlStudent> jpaItemWriter = new JpaItemWriter<>();
-        jpaItemWriter.setEntityManagerFactory(mysqlEntityManagerFactory);
-        return jpaItemWriter;
+        JpaItemWriter<MySqlStudent> writer = new JpaItemWriter<>();
+        writer.setEntityManagerFactory(mysqlEntityManagerFactory);
+        return writer;
     }
 }
