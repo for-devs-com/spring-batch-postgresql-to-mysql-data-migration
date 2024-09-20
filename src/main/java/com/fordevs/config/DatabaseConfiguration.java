@@ -1,120 +1,106 @@
 package com.fordevs.config;
 
-import jakarta.persistence.EntityManagerFactory;
-import org.hibernate.jpa.HibernatePersistenceProvider;
-import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
+import com.fordevs.entity.mysql.MySqlStudent;
+import com.fordevs.entity.postgresql.PostgreSqlStudent;
+import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.Step;
+import org.springframework.batch.core.configuration.support.DefaultBatchConfiguration;
+import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.repository.JobRepository;
+import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
+import org.springframework.batch.item.database.JdbcBatchItemWriter;
+import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.jdbc.datasource.DataSourceTransactionManager;
-import org.springframework.orm.jpa.JpaTransactionManager;
-import org.springframework.orm.jpa.JpaVendorAdapter;
-import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
-import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import javax.sql.DataSource;
 
 @Configuration
-@EnableBatchProcessing(dataSourceRef = "springBatchMetaDataDataSource")
-public class DatabaseConfiguration {
+public class DatabaseConfiguration extends DefaultBatchConfiguration {
 
-
-    @Bean("springBatchMetaDataDataSource")
+    @Bean
     @Primary
-    public DataSource springBatchMetaDataDataSource() {
-        DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
-        dataSourceBuilder.url("jdbc:postgresql://localhost:5432/spring-batch-metadata?createDatabaseIfNotExist=TRUE");
-        dataSourceBuilder.username("postgres");
-        dataSourceBuilder.password("toor");
-        return dataSourceBuilder.build();
-    }
-
-    @Bean("transactionManager")
-    @Primary
-    public PlatformTransactionManager transactionManager() {
-        return new DataSourceTransactionManager(springBatchMetaDataDataSource());
-    }
-
-    @Bean("entityManagerFactory")
-    @Primary
-    public LocalContainerEntityManagerFactoryBean entityManagerFactory(@Qualifier("springBatchMetaDataDataSource") DataSource datasource) {
-        LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
-        em.setDataSource(datasource);
-        em.setPackagesToScan("com.example.yourpackage");
-        JpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
-        em.setJpaVendorAdapter(vendorAdapter);
-        return em;
-    }
-//    @Override
-//    @Bean
-//    @Primary
-////    @ConfigurationProperties(prefix = "spring.datasource")
-//    public DataSource getDatasource() {
-//        DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
-//        dataSourceBuilder.url("jdbc:postgresql://localhost:5432/spring-batch-metadata?createDatabaseIfNotExist=TRUE");
-//        dataSourceBuilder.username("root");
-//        dataSourceBuilder.password("toor");
-//        return dataSourceBuilder.build();
-//    }
-
-    @Bean("mysqluniversitydatasource")
-    public DataSource mysqluniversitydatasource() {
-        DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
-        dataSourceBuilder.url("jdbc:mysql://localhost:3306/university?createDatabaseIfNotExist=TRUE");
-        dataSourceBuilder.username("root");
-        dataSourceBuilder.password("toor");
-        return dataSourceBuilder.build();
-    }
-
-    @Bean("postgresqluniversitydatasource")
-    public DataSource postgresqluniversitydatasource() {
-        DataSourceBuilder dataSourceBuilder = DataSourceBuilder.create();
-        dataSourceBuilder.url("jdbc:postgresql://localhost:5432/for-devs-university?createDatabaseIfNotExist=TRUE");
-        dataSourceBuilder.username("postgres");
-        dataSourceBuilder.password("toor");
-        return dataSourceBuilder.build();
+    @Qualifier("dataSource")
+    @ConfigurationProperties(prefix = "db.job.repo")
+    public DataSource dataSource() {
+        return DataSourceBuilder.create()
+                .type(HikariDataSource.class)
+                .build();
     }
 
     @Bean
-    public EntityManagerFactory postgresqlEntityManagerFactory() {
-        LocalContainerEntityManagerFactoryBean lem = new LocalContainerEntityManagerFactoryBean();
-        lem.setDataSource(postgresqluniversitydatasource());
-        //In next package we have the entity classes require for postgreSql connection
-        lem.setPackagesToScan("com.fordevs.entity.postgresql");
-        lem.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
-        lem.setPersistenceProviderClass(HibernatePersistenceProvider.class);
-        lem.afterPropertiesSet();
-        return lem.getObject();
+    @Qualifier("sourceDataSource")
+    @ConfigurationProperties(prefix = "db.source")
+    public DataSource sourceDataSource() {
+        return DataSourceBuilder.create()
+                .type(HikariDataSource.class)
+                .build();
     }
 
     @Bean
-    public EntityManagerFactory mysqlEntityManagerFactory() {
-        LocalContainerEntityManagerFactoryBean lem = new LocalContainerEntityManagerFactoryBean();
-        lem.setDataSource(mysqluniversitydatasource());
-        lem.setPackagesToScan("com.fordevs.entity.mysql");
-        lem.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
-        lem.setPersistenceProviderClass(HibernatePersistenceProvider.class);
-        lem.afterPropertiesSet();
-        return lem.getObject();
+    @Qualifier("destinationDataSource")
+    @ConfigurationProperties(prefix = "db.destination")
+    public DataSource destinationDataSource() {
+        return DataSourceBuilder.create()
+                .type(HikariDataSource.class)
+                .build();
     }
 
-    @Bean("postgresqlTransactionManager")
-    public JpaTransactionManager postgresqlTransactionManager() {
-        JpaTransactionManager transactionManager = new JpaTransactionManager();
-        transactionManager.setDataSource(postgresqluniversitydatasource());
-        transactionManager.setEntityManagerFactory(postgresqlEntityManagerFactory());
+    @Bean
+    public PlatformTransactionManager transactionManager(@Qualifier("dataSource") DataSource dataSource) {
+        JdbcTransactionManager transactionManager = new JdbcTransactionManager();
+        transactionManager.setDataSource(dataSource);
         return transactionManager;
     }
 
-    @Bean("mysqlTransactionManager")
-    @Primary
-    public JpaTransactionManager mysqlTransactionManager() {
-        JpaTransactionManager transactionManager = new JpaTransactionManager();
-        transactionManager.setDataSource(mysqluniversitydatasource());
-        transactionManager.setEntityManagerFactory(mysqlEntityManagerFactory());
-        return transactionManager;
+    @Bean
+    @Qualifier("chunkJob")
+    public Job chunkJob(
+            JobRepository jobRepository,
+            @Qualifier("firstChunkStep") Step firstChunkStep) {
+        return new JobBuilder("chunkJob", jobRepository)
+                .incrementer(new RunIdIncrementer())
+                .start(firstChunkStep)
+                .build();
+    }
+
+    @Bean
+    @Qualifier("firstChunkStep")
+    public Step firstChunkStep(
+            JobRepository jobRepository,
+            PlatformTransactionManager transactionManager,
+            @Qualifier("sourceDataSource") DataSource sourceDataSource,
+            @Qualifier("destinationDataSource") DataSource destinationDataSource) {
+        return new StepBuilder("firstChunkStep", jobRepository)
+                .<PostgreSqlStudent, MySqlStudent>chunk(200, transactionManager)
+                .reader(jdbcCursorItemReader(sourceDataSource))
+                .writer(jdbcBatchItemWriter(destinationDataSource))
+                .build();
+    }
+
+    public JdbcCursorItemReader<PostgreSqlStudent> jdbcCursorItemReader(DataSource sourceDataSource) {
+        JdbcCursorItemReader<PostgreSqlStudent> reader = new JdbcCursorItemReader<>();
+        reader.setDataSource(sourceDataSource);
+        reader.setSql("SELECT id, name, email FROM student");
+        reader.setRowMapper(new BeanPropertyRowMapper<>(PostgreSqlStudent.class));
+        return reader;
+    }
+
+    public JdbcBatchItemWriter<MySqlStudent> jdbcBatchItemWriter(DataSource destinationDataSource) {
+        JdbcBatchItemWriter<MySqlStudent> writer = new JdbcBatchItemWriter<>();
+        writer.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>());
+        writer.setSql("INSERT INTO student (id, name, email) VALUES (:id, :name, :email)");
+        writer.setDataSource(destinationDataSource);
+        return writer;
     }
 }
