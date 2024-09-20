@@ -2,7 +2,6 @@ package com.fordevs.config;
 
 import com.fordevs.entity.mysql.MySqlStudent;
 import com.fordevs.entity.postgresql.PostgreSqlStudent;
-import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.support.DefaultBatchConfiguration;
@@ -33,27 +32,22 @@ public class DatabaseConfiguration extends DefaultBatchConfiguration {
     @Qualifier("dataSource")
     @ConfigurationProperties(prefix = "db.job.repo")
     public DataSource dataSource() {
-        return DataSourceBuilder.create()
-                .type(HikariDataSource.class)
-                .build();
+        return DataSourceBuilder.create().build();  // Remove HikariDataSource specification
     }
+
 
     @Bean
     @Qualifier("sourceDataSource")
     @ConfigurationProperties(prefix = "db.source")
     public DataSource sourceDataSource() {
-        return DataSourceBuilder.create()
-                .type(HikariDataSource.class)
-                .build();
+        return DataSourceBuilder.create().build();
     }
 
     @Bean
     @Qualifier("destinationDataSource")
     @ConfigurationProperties(prefix = "db.destination")
     public DataSource destinationDataSource() {
-        return DataSourceBuilder.create()
-                .type(HikariDataSource.class)
-                .build();
+        return DataSourceBuilder.create().build();
     }
 
     @Bean
